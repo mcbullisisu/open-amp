@@ -55,14 +55,14 @@ remoteproc_get_mem(struct remoteproc *rproc, const char *name,
 
 			pa_start = mem->pa;
 			pa_end = pa_start + mem->size;
-			if (pa >= pa_start && (pa + size) <= pa_end)
+			if (pa >= pa_start && (pa + size) <= pa_end && pa < pa_end)
 				return mem;
 		} else if (da != METAL_BAD_PHYS) {
 			metal_phys_addr_t da_start, da_end;
 
 			da_start = mem->da;
 			da_end = da_start + mem->size;
-			if (da >= da_start && (da + size) <= da_end)
+			if (da >= da_start && (da + size) <= da_end && da < da_end)
 				return mem;
 		} else if (va) {
 			if (metal_io_virt_to_offset(mem->io, va) !=
@@ -120,21 +120,20 @@ static void *remoteproc_get_rsc_table(struct remoteproc *rproc,
 	if (ret < 0 || ret < (int)len || !img_data) {
 		metal_log(METAL_LOG_ERROR,
 			  "get rsc failed: 0x%llx, 0x%llx\r\n", offset, len);
-		rsc_table = RPROC_ERR_PTR(-RPROC_EINVAL);
+		ret = -RPROC_EINVAL;
 		goto error;
 	}
 	memcpy(rsc_table, img_data, len);
 
 	ret = handle_rsc_table(rproc, rsc_table, len, NULL);
 	if (ret < 0) {
-		rsc_table = RPROC_ERR_PTR(ret);
 		goto error;
 	}
 	return rsc_table;
 
 error:
 	metal_free_memory(rsc_table);
-	return rsc_table;
+	return RPROC_ERR_PTR(ret);
 }
 
 static int remoteproc_parse_rsc_table(struct remoteproc *rproc,
